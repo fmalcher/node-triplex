@@ -24,6 +24,7 @@
     "@types/request": "0.0.43",
     "@types/restify": "^4.3.4",
     "forever": "^0.15.3",
+    "htmlparser2": "^3.9.2",
     "lodash": "^4.17.4",
     "request": "^2.81.0",
     "restify": "^4.3.0",
