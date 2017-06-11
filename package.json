@@ -1,0 +1,35 @@
+{
+  "name": "node-triplex",
+  "version": "0.0.1",
+  "description": "REST Server Backend for Triplex",
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc",
+    "start": "tsc && node server.js",
+    "startForever": "tsc && forever --minUptime 1000 --spinSleepTime 1000 server.js"
+  },
+  "contributors": [
+    {
+      "name": "Robert Weiße",
+      "email": "github@robert-weisse.de"
+    },
+    {
+      "name": "Ferdinand Malcher",
+      "email": "mail@fmalcher.de"
+    }
+  ],
+  "dependencies": {
+    "@types/lodash": "^4.14.65",
+    "@types/node": "^7.0.29",
+    "@types/request": "0.0.43",
+    "@types/restify": "^4.3.4",
+    "forever": "^0.15.3",
+    "lodash": "^4.17.4",
+    "request": "^2.81.0",
+    "restify": "^4.3.0",
+    "typescript": "^2.3.4"
+  },
+  "devDependencies": {
+    "tslint": "^5.4.3"
+  }
+}
