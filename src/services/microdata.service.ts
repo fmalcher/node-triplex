@@ -1,4 +1,4 @@
-import { Triple } from '../models/triple';
+import { TripleSet } from '../models/triple-set';
 import * as htmlparser from 'htmlparser2';
 
 export class MicrodataService {

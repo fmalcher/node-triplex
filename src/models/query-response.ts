@@ -1,7 +1,7 @@
-import { Triple } from './triple';
+import { TripleSet } from './triple-set';
 
 export interface QueryResponse {
-    triples: Triple[];
-    url: string;
+    tripleSets: TripleSet[];
+    uri: string;
     resourceFormat: string;
 }
