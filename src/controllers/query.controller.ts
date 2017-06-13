@@ -9,7 +9,7 @@ export class QueryController {
 
         RequestService.readFromUri(req.body)
             .then(data => MicrodataService.parseHtmlToDom(data))
-            .then(dom => MicrodataService.getTriplesFromDom(dom))
+            .then(dom => MicrodataService.getTriplesFromDom(dom, req.body))
             .then(triples => {
                 res.send(triples);
             });
