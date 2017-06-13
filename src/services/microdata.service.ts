@@ -1,6 +1,6 @@
 import { QueryResponse } from './../models/query-response';
 import { TripleObject } from './../models/triple-object';
-import { TripleSet } from '../models/triple-set';
+import { Triple } from '../models/triple';
 import * as htmlparser from 'htmlparser2';
 import * as isUrl from 'is-url';
 
@@ -20,12 +20,12 @@ export class MicrodataService {
 
         interface Item {
             id: number,
-            tripleSet: TripleSet,
+            triple: Triple,
             depth: number
         }
 
         let results: Item[] = [];
-        let triples: QueryResponse = {tripleSets: [], uri: uri, resourceFormat: 'microdata'};
+        let response: QueryResponse = {triples: [], uri: uri, resourceFormat: 'microdata'};
         let scopeCounter = 0;
         let tripleCounter = 0;
 
@@ -34,16 +34,16 @@ export class MicrodataService {
             nodes.filter(n => n.type === 'tag').forEach(tag => {
                 if (tag.attribs.hasOwnProperty('itemprop')) {
                     let index = results.indexOf(results.filter(i => i.depth < depth).sort(i => i.id)[0]);
-                    if (results[index].tripleSet.predicate == null) {
-                        results[index].tripleSet.predicate = tag.attribs.itemprop;
-                        results[index].tripleSet.object = this.getObject(tag.children);
+                    if (results[index].triple.predicate == null) {
+                        results[index].triple.predicate = tag.attribs.itemprop;
+                        results[index].triple.object = this.getObject(tag.children);
                     } else {
-                        results.push({id: ++tripleCounter, tripleSet: {subject: results[index].tripleSet.subject, predicate: tag.attribs.itemprop, object: this.getObject(tag.children)}, depth: results[index].depth});
+                        results.push({id: ++tripleCounter, triple: {subject: results[index].triple.subject, predicate: tag.attribs.itemprop, object: this.getObject(tag.children)}, depth: results[index].depth});
                     }
                 }
                 if (tag.attribs.hasOwnProperty('itemscope')) {
                     scopeCounter++;
-                    results.push({id: ++tripleCounter, tripleSet: {subject: String(scopeCounter), predicate: null, object: null}, depth: depth});
+                    results.push({id: ++tripleCounter, triple: {subject: String(scopeCounter), predicate: null, object: null}, depth: depth});
                 }
                 if (tag.children) parseOneNode(tag.children, depth);
             });
@@ -51,9 +51,9 @@ export class MicrodataService {
 
         parseOneNode(dom, 0);
 
-        results.forEach(item => triples.tripleSets.push(item.tripleSet));
+        response.triples = results.map(item => item.triple);
 
-        return new Promise((resolve, reject) => resolve(triples));
+        return new Promise((resolve, reject) => resolve(response));
     }
 
     private static getObject(nodes): TripleObject {
