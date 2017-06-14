@@ -36,14 +36,14 @@ export class MicrodataService {
                     let index = results.indexOf(results.filter(i => i.depth < depth).sort(i => i.id)[0]);
                     if (results[index].triple.predicate == null) {
                         results[index].triple.predicate = this.getPredicate(tag.attribs.itemprop, results[index].triple.subject);
-                        results[index].triple.object = this.getObject(tag, scopeCounter);
+                        results[index].triple.object = this.getObject(tag, scopeCounter, uri);
                     } else {
                         results.push({
                             id: ++tripleCounter,
                             triple: {
                                 subject: results[index].triple.subject,
                                 predicate: this.getPredicate(tag.attribs.itemprop, results[index].triple.subject),
-                                object: this.getObject(tag, scopeCounter)
+                                object: this.getObject(tag, scopeCounter, uri)
                             }, depth: results[index].depth});
                     }
                 }
@@ -83,17 +83,46 @@ export class MicrodataService {
         else return {name: name};
     }
 
-    private static getObject(tag: any, scopeCounter: number): TriplePart {
-        let name = '';
+    private static getObject(tag: any, scopeCounter: number, siteUri: string): TriplePart {
+        let name: string;
         let uri = '';
+
         if (tag.attribs.hasOwnProperty('itemscope') && tag.attribs.hasOwnProperty('itemprop')) {
             name = 'Item '.concat(String(scopeCounter + 1)).concat(tag.attribs.itemscope ? tag.attribs.itemscope : '');
             uri = tag.attribs.hasOwnProperty('itemtype') ? (isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype : null) : null;
         } else {
-            tag.children.filter(node => node.type === 'text').forEach(text => {
-                name = name.concat(text.data);
-            });
-            uri = isUrl(name) ? name : null;
+            let isLink = false;
+            if (tag.attribs.hasOwnProperty('content')) name = tag.attribs.content;
+            else if (tag.attribs.hasOwnProperty('text')) name = tag.attribs.text;
+            else {
+                name = '';
+                tag.children.filter(node => node.type === 'text').forEach(text => {
+                    name = name.concat(text.data);
+                });
+            }
+            if (tag.attribs.hasOwnProperty('title')) {
+                name = tag.attribs.title;
+            } else if (tag.attribs.hasOwnProperty('href')) {
+                if (!name) name = tag.attribs.href;
+                isLink = true;
+            } else if (tag.attribs.hasOwnProperty('src')) {
+                if (!name) name = tag.attribs.src;
+                isLink = true;
+            }
+            if (isLink) {
+                if (isUrl(name)) uri = name;
+                else {
+                    if (name.startsWith('/')) {
+                        siteUri.split('/').slice(0, 3).forEach(urlPart => uri = uri.concat(urlPart.concat('/')));
+                        uri = uri.slice(0, -1).concat(name)
+                    } else {
+                        uri = siteUri.endsWith('/') ? siteUri.concat(name) : siteUri.concat('/'.concat(name));
+                    }
+                }
+                if (!isUrl(uri)) uri = null;
+            } else {
+                uri = isUrl(name) ? name : null;
+            }
         }
         if (uri) return {name: name, uri: uri};
         else return {name: name};
