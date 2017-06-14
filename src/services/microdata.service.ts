@@ -1,5 +1,5 @@
 import { QueryResponse } from './../models/query-response';
-import { TripleObject } from './../models/triple-object';
+import { TriplePart } from './../models/triple-part';
 import { Triple } from '../models/triple';
 import * as htmlparser from 'htmlparser2';
 import * as isUrl from 'is-url';
@@ -35,15 +35,27 @@ export class MicrodataService {
                 if (tag.attribs.hasOwnProperty('itemprop')) {
                     let index = results.indexOf(results.filter(i => i.depth < depth).sort(i => i.id)[0]);
                     if (results[index].triple.predicate == null) {
-                        results[index].triple.predicate = tag.attribs.itemprop;
-                        results[index].triple.object = this.getObject(tag.children);
+                        results[index].triple.predicate = this.getPredicate(tag.attribs.itemprop, results[index].triple.subject);
+                        results[index].triple.object = this.getObject(tag, scopeCounter);
                     } else {
-                        results.push({id: ++tripleCounter, triple: {subject: results[index].triple.subject, predicate: tag.attribs.itemprop, object: this.getObject(tag.children)}, depth: results[index].depth});
+                        results.push({
+                            id: ++tripleCounter,
+                            triple: {
+                                subject: results[index].triple.subject,
+                                predicate: this.getPredicate(tag.attribs.itemprop, results[index].triple.subject),
+                                object: this.getObject(tag, scopeCounter)
+                            }, depth: results[index].depth});
                     }
                 }
                 if (tag.attribs.hasOwnProperty('itemscope')) {
                     scopeCounter++;
-                    results.push({id: ++tripleCounter, triple: {subject: String(scopeCounter), predicate: null, object: null}, depth: depth});
+                    results.push({
+                        id: ++tripleCounter,
+                        triple: {
+                            subject: this.getSubject(tag, scopeCounter),
+                            predicate: null,
+                            object: null
+                        }, depth: depth});
                 }
                 if (tag.children) parseOneNode(tag.children, depth);
             });
@@ -56,11 +68,40 @@ export class MicrodataService {
         return new Promise((resolve, reject) => resolve(response));
     }
 
-    private static getObject(nodes): TripleObject {
-        let textContent = '';
-        nodes.filter(n => n.type === 'text').forEach(text => {
-            textContent = textContent.concat(text.data);
-        });
-        return isUrl(textContent) ? {name: textContent, uri: textContent} : {name: textContent};
+    private static getSubject(tag: any, scopeCounter: number): TriplePart {
+        let name = tag.attribs.itemscope ? tag.attribs.itemscope : (!isUrl(tag.attribs.itemtype ? tag.attribs.itemtype : null));
+        name = 'Item '.concat(String(scopeCounter)).concat(name ? ', '.concat(name) : '');
+        let uri = tag.attribs.hasOwnProperty('itemtype') ? (isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype : null) : null;
+        if (uri) return {name: name, uri: uri};
+        else return {name: name};
+    }
+
+    private static getPredicate(itemprop: string, subject: TriplePart): TriplePart {
+        let name: string = isUrl(itemprop) ? itemprop.split('/').slice(-1)[0] : itemprop;
+        let uri: string = subject.uri ? this.generatePredicateUrl(subject.uri, name) : (isUrl(itemprop) ? itemprop : null);
+        if (uri) return {name: name, uri: uri};
+        else return {name: name};
+    }
+
+    private static getObject(tag: any, scopeCounter: number): TriplePart {
+        let name = '';
+        let uri = '';
+        if (tag.attribs.hasOwnProperty('itemscope') && tag.attribs.hasOwnProperty('itemprop')) {
+            name = 'Item '.concat(String(scopeCounter + 1)).concat(tag.attribs.itemscope ? tag.attribs.itemscope : '');
+            uri = tag.attribs.hasOwnProperty('itemtype') ? (isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype : null) : null;
+        } else {
+            tag.children.filter(node => node.type === 'text').forEach(text => {
+                name = name.concat(text.data);
+            });
+            uri = isUrl(name) ? name : null;
+        }
+        if (uri) return {name: name, uri: uri};
+        else return {name: name};
+    }
+
+    private static generatePredicateUrl(uri: string, name: string): string {
+        let response = ''
+        uri.split('/').slice(0, -1).forEach(urlPart => response = response.concat(urlPart + '/'));
+        return response.concat(name);
     }
 }
