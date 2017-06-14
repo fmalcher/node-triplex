@@ -3,13 +3,7 @@ import { QueryController } from './src/controllers/query.controller';
 
 const queryController = new QueryController();
 
-let server = createServer({
-    formatters: {
-        'application/json': function (req, res, body, cb) {
-            return cb(null, JSON.stringify(body, null, '  '));
-        }
-    }
-});
+let server = createServer();
 
 server.use(bodyParser());
 server.use(CORS({}));

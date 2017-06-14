@@ -2,15 +2,12 @@ import { NotFoundError, BadRequestError, InternalError } from 'restify';
 
 import { RequestService } from '../services/request.service';
 import { MicrodataService } from '../services/microdata.service';
-import { ContentType } from '../content-type';
 
 export class QueryController {
     processQuery(req, res, next) {
         RequestService.readFromUri(req.body)
-            .then(data => MicrodataService.parseHtmlToDom(data))
+            .then(html => MicrodataService.parseHtmlToDom(html))
             .then(dom => MicrodataService.getTriplesFromDom(dom, req.body))
-            .then(triples => {
-                res.send(triples);
-            });
+            .then(response => res.json(response));
     }
 }
