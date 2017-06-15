@@ -6,7 +6,7 @@ import { MicrodataService } from '../services/microdata.service';
 export class QueryController {
     processQuery(req, res, next) {
         RequestService.readFromUri(req.body)
-            .then(html => MicrodataService.parseHtmlToDom(html))
+            .then(html => RequestService.parseHtmlToDom(html))
             .then(dom => MicrodataService.getTriplesFromDom(dom, req.body))
             .then(response => res.json(response));
     }

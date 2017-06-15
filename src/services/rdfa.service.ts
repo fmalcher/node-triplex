@@ -3,7 +3,7 @@ import { TriplePart } from './../models/triple-part';
 import { Triple } from '../models/triple';
 import * as isUrl from 'is-url';
 
-export class MicrodataService {
+export class RDFaService {
 
     static getTriplesFromDom(dom: any, uri: string) {
 
@@ -14,29 +14,29 @@ export class MicrodataService {
         }
 
         let results: Item[] = [];
-        let response: QueryResponse = {triples: [], uri: uri, resourceFormat: 'microdata'};
+        let response: QueryResponse = {triples: [], uri: uri, resourceFormat: 'RDFa'};
         let scopeCounter = 0;
         let tripleCounter = 0;
 
         let parseOneNode = (nodes, currentDepth: number) => {
             let depth = currentDepth + 1;
             nodes.filter(n => n.type === 'tag').forEach(tag => {
-                if (tag.attribs.hasOwnProperty('itemprop')) {
+                if (tag.attribs.hasOwnProperty('property')) {
                     let index = results.indexOf(results.filter(i => i.depth < depth).sort(i => i.id)[0]);
                     if (results[index].triple.predicate == null) {
-                        results[index].triple.predicate = this.getPredicate(tag.attribs.itemprop, results[index].triple.subject);
+                        results[index].triple.predicate = this.getPredicate(tag.attribs.property, results[index].triple.subject);
                         results[index].triple.object = this.getObject(tag, scopeCounter, uri);
                     } else {
                         results.push({
                             id: ++tripleCounter,
                             triple: {
                                 subject: results[index].triple.subject,
-                                predicate: this.getPredicate(tag.attribs.itemprop, results[index].triple.subject),
+                                predicate: this.getPredicate(tag.attribs.property, results[index].triple.subject),
                                 object: this.getObject(tag, scopeCounter, uri)
                             }, depth: results[index].depth});
                     }
                 }
-                if (tag.attribs.hasOwnProperty('itemscope')) {
+                if (tag.attribs.hasOwnProperty('vocab') || tag.attribs.hasOwnProperty('prefix')) {
                     scopeCounter++;
                     results.push({
                         id: ++tripleCounter,
@@ -58,16 +58,25 @@ export class MicrodataService {
     }
 
     private static getSubject(tag: any, scopeCounter: number): TriplePart {
-        let name = !isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype : tag.attribs.itemtype.split('/')[tag.attribs.itemtype.split('/').length - 1]; // TODO!!!
+        let name, uri = null;
+        if (tag.attribs.hasOwnProperty('vocab')) {
+            name = tag.attribs.vocab;
+            if (tag.attribs.hasOwnProperty('typeof')) name = name.concat(tag.attribs.typeof);
+            if (isUrl(name)) uri = name;
+        } else if (tag.attribs.hasOwnProperty('prefix')) {
+            let tempArray = tag.attribs.vocab.split('dc:');
+            name = tempArray[tempArray.length - 1].replace(' ', '');
+            if (isUrl(name)) uri = name;
+            if (tag.attribs.hasOwnProperty('resource')) name = tag.attribs.resource;
+        }
         name = 'Item '.concat(String(scopeCounter)).concat(name ? ': '.concat(name) : '');
-        let uri = tag.attribs.hasOwnProperty('itemtype') ? (isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype : null) : null;
         if (uri) return {name: name, uri: uri};
         else return {name: name};
     }
 
-    private static getPredicate(itemprop: string, subject: TriplePart): TriplePart {
-        let name: string = isUrl(itemprop) ? itemprop.split('/').slice(-1)[0] : itemprop;
-        let uri: string = subject.uri ? this.generatePredicateUrl(subject.uri, name) : (isUrl(itemprop) ? itemprop : null);
+    private static getPredicate(property: string, subject: TriplePart): TriplePart {
+        let name: string = isUrl(property) ? property.split('/').slice(-1)[0] : property;
+        let uri: string = subject.uri ? this.generatePredicateUrl(subject.uri, name) : (isUrl(property) ? property : null);
         if (uri) return {name: name, uri: uri};
         else return {name: name};
     }
@@ -76,42 +85,37 @@ export class MicrodataService {
         let name: string;
         let uri = '';
 
-        if (tag.attribs.hasOwnProperty('itemscope') && tag.attribs.hasOwnProperty('itemprop')) {
-            name = 'Item '.concat(String(scopeCounter + 1));
-            uri = tag.attribs.hasOwnProperty('itemtype') ? (isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype : null) : null;
-        } else {
-            let isLink = false;
-            if (tag.attribs.hasOwnProperty('content')) name = tag.attribs.content;
-            else {
-                name = '';
-                tag.children.filter(node => node.type === 'text').forEach(text => {
-                    name = name.concat(text.data);
-                });
-            }
-            if (tag.attribs.hasOwnProperty('title')) {
-                name = tag.attribs.title;
-            } else if (tag.attribs.hasOwnProperty('href')) {
-                if (!name) name = tag.attribs.href;
-                uri = tag.attribs.href;
-                isLink = true;
-            } else if (tag.attribs.hasOwnProperty('src')) {
-                if (!name) name = tag.attribs.src;
-                uri = tag.attribs.src;
-                isLink = true;
-            }
-            if (isLink) {
-                if (uri.startsWith('/')) {
-                    let temp = uri;
-                    uri = '';
-                    siteUri.split('/').slice(0, 3).forEach(urlPart => uri = uri.concat(urlPart.concat('/')));
-                    uri = uri.slice(0, -1).concat(temp)
-                } else {
-                    uri = siteUri.endsWith('/') ? siteUri.concat(uri) : siteUri.concat('/'.concat(uri));
-                }
-                if (!isUrl(uri)) uri = null;
+        let isLink = false;
+        if (tag.attribs.hasOwnProperty('content')) name = tag.attribs.content;
+        else {
+            name = '';
+            tag.children.filter(node => node.type === 'text').forEach(text => {
+                name = name.concat(text.data);
+            });
+        }
+        if (tag.attribs.hasOwnProperty('title')) {
+            name = tag.attribs.title;
+        } else if (tag.attribs.hasOwnProperty('href')) {
+            if (!name) name = tag.attribs.href;
+            uri = tag.attribs.href;
+            isLink = true;
+        } else if (tag.attribs.hasOwnProperty('src')) {
+            if (!name) name = tag.attribs.src;
+            uri = tag.attribs.src;
+            isLink = true;
+        }
+        if (isLink) {
+            if (uri.startsWith('/')) {
+                let temp = uri;
+                uri = '';
+                siteUri.split('/').slice(0, 3).forEach(urlPart => uri = uri.concat(urlPart.concat('/')));
+                uri = uri.slice(0, -1).concat(temp)
             } else {
-                uri = isUrl(name) ? name : null;
+                uri = siteUri.endsWith('/') ? siteUri.concat(uri) : siteUri.concat('/'.concat(uri));
             }
+            if (!isUrl(uri)) uri = null;
+        } else {
+            uri = isUrl(name) ? name : null;
         }
         if (uri) return {name: name, uri: uri};
         else return {name: name};
@@ -119,6 +123,7 @@ export class MicrodataService {
 
     private static generatePredicateUrl(uri: string, name: string): string {
         let response = ''
+        if (uri.endsWith('/')) return uri.concat(name);
         uri.split('/').slice(0, -1).forEach(urlPart => response = response.concat(urlPart + '/'));
         return response.concat(name);
     }
