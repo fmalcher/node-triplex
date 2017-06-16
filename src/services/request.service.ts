@@ -57,23 +57,21 @@ export class RequestService {
     }
 
     static generateResponse(dataTypes, uri: string): Promise<QueryResponse[]> {
-        return new Promise((resolve, reject) => {
-            let promises: Promise<QueryResponse>[] = [];
+        let promises: Promise<QueryResponse>[] = [];
 
-            if (dataTypes.isMicrodata) {
-                let p = this.parseHtmlToDom(dataTypes.content)
-                    .then(dom => MicrodataService.getTriplesFromDom(dom, uri));
-                promises.push(p);
-            }
+        if (dataTypes.isMicrodata) {
+            let p = this.parseHtmlToDom(dataTypes.content)
+                .then(dom => MicrodataService.getTriplesFromDom(dom, uri));
+            promises.push(p);
+        }
 
-            if (dataTypes.isRDFa) {
-                let p = this.parseHtmlToDom(dataTypes.content)
-                    .then(dom => RDFaService.getTriplesFromDom(dom, uri));
-                promises.push(p);
-            }
+        if (dataTypes.isRDFa) {
+            let p = this.parseHtmlToDom(dataTypes.content)
+                .then(dom => RDFaService.getTriplesFromDom(dom, uri));
+            promises.push(p);
+        }
 
-            resolve(Promise.all(promises));
-        });
+        return Promise.all(promises);
     }
 }
 
