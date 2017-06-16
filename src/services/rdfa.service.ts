@@ -66,7 +66,7 @@ export class RDFaService {
             if (tag.attribs.hasOwnProperty('typeof')) name = name.concat(tag.attribs.typeof);
             if (isUrl(name)) uri = name;
         } else if (tag.attribs.hasOwnProperty('prefix')) {
-            let tempArray = tag.attribs.vocab.split('dc:');
+            let tempArray = tag.attribs.prefix.split('dc:');
             name = tempArray[tempArray.length - 1].replace(' ', '');
             if (isUrl(name)) uri = name;
             if (tag.attribs.hasOwnProperty('resource')) name = tag.attribs.resource;

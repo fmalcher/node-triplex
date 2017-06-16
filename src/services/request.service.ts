@@ -29,25 +29,25 @@ export class RequestService {
 
     static findDataTypes(content: string): Promise<any> {
 
-        interface DataTypes {
+        interface Data {
             content: string;
-            isMicrodata: boolean;
-            isRDFa: boolean;
+            containsMicrodata: boolean;
+            containsRDFa: boolean;
         }
 
         return new Promise((resolve, reject) => {
-            let dataTypes: DataTypes = {content: content, isMicrodata: false, isRDFa: false};
+            let dataTypes: Data = {content: content, containsMicrodata: false, containsRDFa: false};
             let handler = new htmlparser.DomHandler((error, dom) => {
                 // HTML content
                 if (!error) {
                     if (content.includes('itemscope') && content.includes('itemtype') && content.includes('itemprop'))
-                        dataTypes.isMicrodata = true;
+                        dataTypes.containsMicrodata = true;
                     if (content.includes('vocab') && content.includes('typeof') && content.includes('property'))
-                        dataTypes.isRDFa = true;
+                        dataTypes.containsRDFa = true;
                 } else { // JSON content
                     // TODO
                 }
-                if (!dataTypes.isMicrodata && !dataTypes.isRDFa) reject('TODO ERROR 1');
+                if (!dataTypes.containsMicrodata && !dataTypes.containsRDFa) reject('TODO ERROR 1');
                 else resolve(dataTypes);
             });
             let parser = new htmlparser.Parser(handler);
@@ -59,13 +59,13 @@ export class RequestService {
     static generateResponse(dataTypes, uri: string): Promise<QueryResponse[]> {
         let promises: Promise<QueryResponse>[] = [];
 
-        if (dataTypes.isMicrodata) {
+        if (dataTypes.containsMicrodata) {
             let p = this.parseHtmlToDom(dataTypes.content)
                 .then(dom => MicrodataService.getTriplesFromDom(dom, uri));
             promises.push(p);
         }
 
-        if (dataTypes.isRDFa) {
+        if (dataTypes.containsRDFa) {
             let p = this.parseHtmlToDom(dataTypes.content)
                 .then(dom => RDFaService.getTriplesFromDom(dom, uri));
             promises.push(p);
