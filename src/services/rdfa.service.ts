@@ -54,6 +54,8 @@ export class RDFaService {
 
         response.triples = results.map(item => item.triple);
 
+        console.log('Processed ' + String(results.length) + ' ' + response.resourceFormat + '-Items');
+
         return new Promise((resolve, reject) => resolve(response));
     }
 
