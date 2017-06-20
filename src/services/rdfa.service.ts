@@ -22,15 +22,15 @@ export class RDFaService {
                         vocabs.set('rdfs', currentVocab);
                 }
                 if (tag.attribs.hasOwnProperty('prefix')) {
-                    let prefixes: string[] = tag.attribs.prefix.replace(/:\/\//g, '§§//').split(' ');
+                    let prefixes: string[] = tag.attribs.prefix.replace(/:\/\//g, '§§§§//').split(' ');
                     let currentPrefix = null;
                     for (let i = 0; i < prefixes.length; i++) {
                         if (prefixes[i].endsWith(':')) {
                             currentPrefix = prefixes[i].split(':')[0];
                         } else if (prefixes[i].split(':').length > 1) {
-                            vocabs.set(prefixes[i].split(':')[0], prefixes[i].split(':')[1].replace('§§', ':'));
+                            vocabs.set(prefixes[i].split(':')[0], prefixes[i].split(':')[1].replace('§§§§', ':'));
                         } else {
-                            vocabs.set(currentPrefix, prefixes[i].replace('§§', ':'));
+                            vocabs.set(currentPrefix, prefixes[i].replace('§§§§', ':'));
                         }
                     }
                 }
