@@ -7,14 +7,20 @@ export class RDFaService {
 
     static getTriplesFromDom(dom: any, uri: string) {
 
-        let queryResponse: QueryResponse = {triples: [], uri: uri, resourceFormat: 'microdata'};
+        let queryResponse: QueryResponse = {triples: [], uri: uri, resourceFormat: 'RDFa'};
         let triples: Triple[] = [];
         let vocabs = new Map<string, string>();
         let scopeCounter = 0;
 
-        let parseOneNode = (nodes, _parent: Triple) => {
+        let parseOneNode = (nodes, _parent: Triple, _vocab: string) => {
             let parent: Triple = _parent;
+            let currentVocab: string = _vocab;
             nodes.filter(n => n.type === 'tag').forEach(tag => {
+                if (tag.attribs.hasOwnProperty('vocab')) {
+                    currentVocab = tag.attribs.vocab;
+                    if (tag.attribs.hasOwnProperty('typeof') && tag.attribs.typeof.includes('rdfs:'))
+                        vocabs.set('rdfs', currentVocab);
+                }
                 if (tag.attribs.hasOwnProperty('prefix')) {
                     let prefixes: string[] = tag.attribs.prefix.replace(/:\/\//g, '§§//').split(' ');
                     let currentPrefix = null;
@@ -33,7 +39,7 @@ export class RDFaService {
                     triples.push({
                         subject: parent.subject,
                         predicate: this.getPredicate(vocabs, tag.attribs.property, parent.object),
-                        object: tag.attribs.hasOwnProperty('typeof') ? this.getObject(vocabs, tag, uri, scopeCounter) : this.getObject(vocabs, tag, uri)
+                        object: tag.attribs.hasOwnProperty('typeof') ? this.getObject(currentVocab, vocabs, tag, uri, scopeCounter) : this.getObject(currentVocab, vocabs, tag, uri)
                     });
                 }
                 if (tag.attribs.hasOwnProperty('typeof')) {
@@ -41,15 +47,15 @@ export class RDFaService {
                     triples.push({
                         subject: {name: '_:genid' + String(scopeCounter)},
                         predicate: {name: 'rdf-syntax-ns#type', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'},
-                        object: this.getObject(vocabs, tag, uri, 0, parent != null ? parent.object : null)
+                        object: this.getObject(currentVocab, vocabs, tag, uri, 0, parent != null ? parent.object : null)
                     });
                     parent = triples[triples.length - 1];
                 }
-                if (tag.children) parseOneNode(tag.children, parent);
+                if (tag.children) parseOneNode(tag.children, parent, currentVocab);
             });
         }
 
-        parseOneNode(dom, null);
+        parseOneNode(dom, null, '');
 
         queryResponse.triples = triples;
 
@@ -74,7 +80,7 @@ export class RDFaService {
         else return {name: name};
     }
 
-    private static getObject(vocabs: Map<string, string>, tag: any, siteUri: string, scopeCounter?: number, parentObject?: TriplePart): TriplePart {
+    private static getObject(currentVocab: string, vocabs: Map<string, string>, tag: any, siteUri: string, scopeCounter?: number, parentObject?: TriplePart): TriplePart {
         let name: string;
         let uri = '';
 
@@ -88,7 +94,7 @@ export class RDFaService {
                     uri = vocabs.get(tag.attribs.typeof.split(':')[0]) + name;
                 } else {
                     name = tag.attribs.typeof
-                    uri = tag.attribs.hasOwnProperty('vocab') ? tag.attribs.vocab + tag.attribs.typeof : parentObject != null ? this.generatePredicateUrl(parentObject.uri, tag.attribs.typeof) : null;
+                    uri = isUrl(currentVocab + tag.attribs.typeof) ? currentVocab + tag.attribs.typeof : null;
                 }
             } else {
                 name = tag.attribs.typeof.split('/')[tag.attribs.typeof.split('/').length - 1];
@@ -109,7 +115,7 @@ export class RDFaService {
             }
 
             if (tag.attribs.hasOwnProperty('href')) {
-                if (!name) name = tag.attribs.href;
+                if (!name) name = isUrl(tag.attribs.href) ? tag.attribs.href.split('/')[tag.attribs.href.split('/').length - 1] : tag.attribs.href;
                 uri = tag.attribs.href;
                 isLink = true;
             } else if (tag.attribs.hasOwnProperty('src')) {

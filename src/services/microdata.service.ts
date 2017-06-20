@@ -81,7 +81,7 @@ export class MicrodataService {
             }
 
             if (tag.attribs.hasOwnProperty('href')) {
-                if (!name) name = tag.attribs.href;
+                if (!name) name = isUrl(tag.attribs.href) ? tag.attribs.href.split('/')[tag.attribs.href.split('/').length - 1] : tag.attribs.href;
                 uri = tag.attribs.href;
                 isLink = true;
             } else if (tag.attribs.hasOwnProperty('src')) {
