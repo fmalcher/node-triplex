@@ -12,5 +12,5 @@ server.use(queryParser());
 server.post('/query', queryController.processQuery);
 
 server.listen(3000, () => {
-    console.log('Triplex API on %s', server.url);
+    console.log('Triplex API on %s', server.url + '/query');
 });

@@ -14,7 +14,7 @@ export class MicrodataService {
         let parseOneNode = (nodes, _parent: Triple) => {
             let parent: Triple = _parent;
             nodes.filter(n => n.type === 'tag').forEach(tag => {
-                if (tag.attribs.hasOwnProperty('itemprop')) {
+                if (tag.attribs.hasOwnProperty('itemprop') && parent) {
                     triples.push({
                         subject: parent.subject,
                         predicate: this.getPredicate(tag.attribs.itemprop, parent.object),
@@ -103,8 +103,10 @@ export class MicrodataService {
                 uri = isUrl(name) ? name : null;
             }
         }
-        if (uri) return {name: name, uri: uri};
-        else return {name: name};
+        if (uri) {
+            if (!name || name.replace(/(\r\n|\r|\n| )/g, '').length == 0) name = uri.split('/')[uri.split('/').length - 1];
+            return {name: name, uri: uri};
+        } else return {name: name};
     }
 
     private static generatePredicateUrl(uri: string, name: string): string {

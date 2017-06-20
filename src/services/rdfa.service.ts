@@ -33,9 +33,8 @@ export class RDFaService {
                             vocabs.set(currentPrefix, prefixes[i].replace('§§', ':'));
                         }
                     }
-                    console.log(vocabs.values);
                 }
-                if (tag.attribs.hasOwnProperty('property')) {
+                if (tag.attribs.hasOwnProperty('property') && parent) {
                     triples.push({
                         subject: parent.subject,
                         predicate: this.getPredicate(vocabs, tag.attribs.property, parent.object),
@@ -137,8 +136,10 @@ export class RDFaService {
                 uri = isUrl(name) ? name : null;
             }
         }
-        if (uri) return {name: name, uri: uri};
-        else return {name: name};
+        if (uri) {
+            if (!name || name.replace(/(\r\n|\r|\n| )/g, '').length == 0) name = uri.split('/')[uri.split('/').length - 1];
+            return {name: name, uri: uri};
+        } else return {name: name};
     }
 
     private static generatePredicateUrl(uri: string, name: string): string {

@@ -6,10 +6,10 @@ import * as htmlparser from 'htmlparser2';
 
 export class RequestService {
 
-    static readFromUri(uri: string): Promise<string> {
+    static readFromUri(uri: string): Promise<any> {
         return new Promise((resolve, reject) => {
             request(uri, (error, response, body) => {
-                if (error) reject(error);
+                if (error) reject(400);
                 resolve(body);
             });
         });
@@ -18,7 +18,7 @@ export class RequestService {
     static parseHtmlToDom(rawHtml: string): Promise<any> {
         return new Promise((resolve, reject) => {
             let handler = new htmlparser.DomHandler((error, dom) => {
-                if (error) reject(error);
+                if (error) reject(422);
                 resolve(dom);
             });
             let parser = new htmlparser.Parser(handler);
@@ -47,8 +47,7 @@ export class RequestService {
                 } else { // JSON content
                     // TODO
                 }
-                if (!dataTypes.containsMicrodata && !dataTypes.containsRDFa) reject('TODO ERROR 1');
-                else resolve(dataTypes);
+                resolve(dataTypes);
             });
             let parser = new htmlparser.Parser(handler);
             parser.write(content);
