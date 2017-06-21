@@ -97,7 +97,3 @@ export class RequestService {
         return containsNtriples;
     }
 }
-
-
-
-
