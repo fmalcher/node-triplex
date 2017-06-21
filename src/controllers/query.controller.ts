@@ -1,8 +1,11 @@
-import { NotFoundError, BadRequestError, InternalError } from 'restify';
 import { RequestService } from '../services/request.service';
 
 export class QueryController {
 
+    /*
+     * Function called by requesting /query ressource.
+     * Returns array of query-reponse.ts (containing triple), empty array or http error code.
+     */
     processQuery(req, res, next) {
         RequestService.readFromUri(req.body)
         .then(content => { if (content) return RequestService.findDataTypes(content) })

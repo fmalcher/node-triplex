@@ -1,4 +1,4 @@
-import { createServer, bodyParser, CORS, queryParser, serveStatic, NotFoundError } from 'restify';
+import { createServer, bodyParser, CORS, queryParser } from 'restify';
 import { QueryController } from './src/controllers/query.controller';
 
 const queryController = new QueryController();
@@ -9,8 +9,13 @@ server.use(bodyParser());
 server.use(CORS({}));
 server.use(queryParser());
 
+/*
+ * Provide ressource uri for triple requests.
+ * If necessary other ressources could be added here in future.
+ */
 server.post('/query', queryController.processQuery);
 
+// Start server listening in port 3000.
 server.listen(3000, () => {
     console.log('Triplex API on %s', server.url + '/query');
 });

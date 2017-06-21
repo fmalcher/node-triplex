@@ -3,17 +3,30 @@ import { TriplePart } from './../models/triple-part';
 import { Triple } from '../models/triple';
 import * as isUrl from 'is-url';
 
+/*
+ * Microdata-Class: Implements logic for extracting
+ * microdata-triples from HTML-DOM.
+ */
+
 export class MicrodataService {
 
+    // Function called by request.service.ts - generateResponse()
     static getTriplesFromDom(dom: any, uri: string) {
 
-        let queryResponse: QueryResponse = {triples: [], uri: uri, resourceFormat: 'microdata'};
+        let queryResponse: QueryResponse = {triples: [], resourceFormat: 'Microdata'};
         let triples: Triple[] = [];
         let scopeCounter = 0;
 
         let parseOneNode = (nodes, _parent: Triple) => {
             let parent: Triple = _parent;
+
+            /*
+             * For each node in current DOM-hierarchy that has the type "tag" (<tagname/>)
+             * test if it has got an element like "itemprop" or "itemscope". If such an element
+             * is found, generate new triple an push it to triples array.
+             */
             nodes.filter(n => n.type === 'tag').forEach(tag => {
+                // itemprop found (predicate). Belongs to a parent triple.
                 if (tag.attribs.hasOwnProperty('itemprop') && parent) {
                     triples.push({
                         subject: parent.subject,
@@ -21,6 +34,7 @@ export class MicrodataService {
                         object: tag.attribs.hasOwnProperty('itemscope') ? this.getObject(tag, uri, scopeCounter) : this.getObject(tag, uri)
                     });
                 }
+                // itemscope found: new triple! This is the new parent triple of its children.
                 if (tag.attribs.hasOwnProperty('itemscope')) {
                     scopeCounter++;
                     triples.push({
@@ -30,12 +44,15 @@ export class MicrodataService {
                     });
                     parent = triples[triples.length - 1];
                 }
+                // If current node has got child-nodes call parseOneNode() recursively
                 if (tag.children) parseOneNode(tag.children, parent);
             });
         }
 
+        // Start parsing DOM
         parseOneNode(dom, null);
 
+        // Add triples array to reponse
         queryResponse.triples = triples;
 
         console.log('Processed ' + String(triples.length) + ' ' + queryResponse.resourceFormat + '-Items');

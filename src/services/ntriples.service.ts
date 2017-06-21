@@ -3,11 +3,17 @@ import { TriplePart } from './../models/triple-part';
 import { Triple } from '../models/triple';
 import * as isUrl from 'is-url';
 
+/*
+ * Ntriples-Class: Implements logic for extracting
+ * n-triples from HTML-DOM.
+ */
+
 export class Ntriples {
 
+    // Function called by request.service.ts - generateResponse()
     static getTriplesFromContent(content: string, uri: string) {
 
-        let queryResponse: QueryResponse = {triples: [], uri: uri, resourceFormat: 'N-Triples'};
+        let queryResponse: QueryResponse = {triples: [], resourceFormat: 'N-Triple'};
         let triples: Triple[] = [];
         let tripleLines: string[] = content.split('\n');
 

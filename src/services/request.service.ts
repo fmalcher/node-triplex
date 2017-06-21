@@ -1,4 +1,3 @@
-import { ContentType } from './../content-type';
 import { Ntriples } from './ntriples.service';
 import { RDFaService } from './rdfa.service';
 import { MicrodataService } from './microdata.service';
@@ -50,7 +49,7 @@ export class RequestService {
                 if (error) reject(500);
                 if (content.includes('itemscope') && content.includes('itemtype') && content.includes('itemprop'))
                     dataTypes.containsMicrodata = true;
-                if (content.includes('typeof') && content.includes('property'))
+                if ((content.includes('vocab') || content.includes('prefix')) && content.includes('typeof') && content.includes('property'))
                     dataTypes.containsRDFa = true;
                 dataTypes.containsNtriples = this.checkNtriples(content);
                 resolve(dataTypes);
