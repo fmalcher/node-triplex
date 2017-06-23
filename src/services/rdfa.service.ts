@@ -50,7 +50,7 @@ export class RDFaService {
                  * current node is added to the prefix dictionary.
                  */
                 if (tag.attribs.hasOwnProperty('prefix')) {
-                    // Replace "://" (from http://xxx.xxx.xxx) with "§§§§//" so that the left ":" are definately seperators.
+                    // Replace "://" (from http://xxx.xxx.xxx) with "§§§§//" so that the left ":" are definately seperators and split by spaces.
                     let prefixes: string[] = tag.attribs.prefix.replace(/:\/\//g, '§§§§//').split(' ');
                     let currentPrefix = null;
                     // Split by ":", read prefix-name and vocab (replacing "§§§§" with ":") and add them to the dictionary.
@@ -68,21 +68,21 @@ export class RDFaService {
                 if (tag.attribs.hasOwnProperty('property') && parent) {
                     triples.push({
                         subject: parent.subject,
-                        predicate: this.getPredicate(vocabs, tag.attribs.property, parent.object),
+                        predicate: this.getPredicate(currentVocab, vocabs, tag.attribs.property),
                         object: tag.attribs.hasOwnProperty('typeof') ? this.getObject(currentVocab, vocabs, tag, uri, scopeCounter) : this.getObject(currentVocab, vocabs, tag, uri)
                     });
                 }
-                // typeof found: new triple! This is the new parent triple of its children.
+                // typeof found: new parent triple! This is the new parent triple of its children.
                 if (tag.attribs.hasOwnProperty('typeof')) {
                     scopeCounter++;
                     triples.push({
                         subject: {name: '_:genid' + String(scopeCounter)},
                         predicate: {name: 'rdf-syntax-ns#type', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'},
-                        object: this.getObject(currentVocab, vocabs, tag, uri, 0, parent != null ? parent.object : null)
+                        object: this.getObject(currentVocab, vocabs, tag, uri)
                     });
                     parent = triples[triples.length - 1];
                 }
-                // If current node has got child-nodes call parseOneNode() recursively
+                // If current node has got child-nodes call parseOneNode() recursively.
                 if (tag.children) parseOneNode(tag.children, parent, currentVocab);
             });
         }
@@ -90,7 +90,7 @@ export class RDFaService {
         // Start parsing DOM
         parseOneNode(dom, null, '');
 
-        // Add triples array to reponse
+        // Add triples array to reponse.
         queryResponse.triples = triples;
 
         console.log('Processed ' + String(triples.length) + ' ' + queryResponse.resourceFormat + '-Items');
@@ -98,30 +98,47 @@ export class RDFaService {
         return new Promise((resolve, reject) => resolve(queryResponse));
     }
 
-    private static getPredicate(vocabs: Map<string, string>, property: string, parentObject: TriplePart): TriplePart {
+    // Returns the predicate of a triple with its name and uri as TriplePart.
+    private static getPredicate(currentVocab: string, vocabs: Map<string, string>, property: string): TriplePart {
         let name: string = property;
         let uri: string = null;
+        /*
+         * If property is an url get the string behind the last slash for setting the predicates name and set uri = property.
+         * If property starts with prefix, split information, search vocab in dictionary and generate url by combining
+         * name and vocab. If property is not an url combine it with the last vocab-information.
+         */
         if (isUrl(property)) {
             name = property.split('/')[property.split('/').length - 1];
             uri = property;
         } else if (property.split(':').length > 1) {
+            // Replace the first space with an empty character because in some cases spaces are behind the colon.
             name = property.split(':')[1].replace(' ', '');
             uri = vocabs.get(property.split(':')[0]) + name;
         } else {
-            uri = parentObject.uri ? this.generatePredicateUrl(parentObject.uri, name) : null;
+            uri = isUrl(currentVocab + property) ? currentVocab + property : null;
         }
         if (uri) return {name: name, uri: uri};
         else return {name: name};
     }
 
-    private static getObject(currentVocab: string, vocabs: Map<string, string>, tag: any, siteUri: string, scopeCounter?: number, parentObject?: TriplePart): TriplePart {
+    // Returns the object of a triple with its name and uri as TriplePart.
+    private static getObject(currentVocab: string, vocabs: Map<string, string>, tag: any, siteUri: string, scopeCounter?: number): TriplePart {
         let name: string;
         let uri = '';
 
         if (scopeCounter && scopeCounter > 0) {
+            /*
+             * If scopeCounter is not null and not 0 current object references a child triple.
+             * New id of child triple = current id + 1
+             */
             name = '_:genid' + String(scopeCounter + 1);
             uri = null;
         } else if (tag.attribs.hasOwnProperty('typeof')) {
+            /*
+             * If current tag contains "typeof" it is a new parent triple.
+             * Object contains uri and name to rdf-syntax-ns#type.
+             * Same logic like in getPredicate()-Function.
+             */
             if (!isUrl(tag.attribs.typeof)) {
                 if (tag.attribs.typeof.split(':').length > 1) {
                     name = tag.attribs.typeof.split(':')[1].replace(' ', '');
@@ -135,6 +152,10 @@ export class RDFaService {
                 uri = tag.attribs.typeof;
             }
         } else {
+            /*
+             * If tag is neither referencing another triple nor being a new parent triple
+             * extract content information.
+             */
             let isLink = false;
 
             if (tag.attribs.hasOwnProperty('title'))
@@ -142,12 +163,14 @@ export class RDFaService {
             else if (tag.attribs.hasOwnProperty('content'))
                 name = tag.attribs.content;
             else {
+                // Extract plaintext
                 name = '';
                 tag.children.filter(node => node.type === 'text').forEach(text => {
                     name += text.data;
                 });
             }
 
+            // If contains "href" or "src" element set name (if name is null) and uri.
             if (tag.attribs.hasOwnProperty('href')) {
                 if (!name) name = isUrl(tag.attribs.href) ? tag.attribs.href.split('/')[tag.attribs.href.split('/').length - 1] : tag.attribs.href;
                 uri = tag.attribs.href;
@@ -158,6 +181,7 @@ export class RDFaService {
                 isLink = true;
             }
 
+            // Handling absolute and relative uri.
             if (isLink) {
                 if (uri.startsWith('/')) {
                     let temp = uri;
@@ -171,16 +195,11 @@ export class RDFaService {
                 uri = isUrl(name) ? name : null;
             }
         }
+
         if (uri) {
-            if (!name || name.replace(/(\r\n|\r|\n| )/g, '').length == 0) name = uri.split('/')[uri.split('/').length - 1];
+            // If name is null or name is empty (or if it just contains "\r", "\n", "\t"), set name = uri (string behind last slash).
+            if (!name || name.replace(/(\r|\n|\t| )/g, '').length == 0) name = uri.split('/')[uri.split('/').length - 1];
             return {name: name, uri: uri};
         } else return {name: name};
-    }
-
-    private static generatePredicateUrl(uri: string, name: string): string {
-        let response = ''
-        if (uri.endsWith('/')) return uri.concat(name);
-        uri.split('/').slice(0, -1).forEach(urlPart => response = response.concat(urlPart + '/'));
-        return response.concat(name);
     }
 }

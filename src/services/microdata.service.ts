@@ -44,7 +44,7 @@ export class MicrodataService {
                     });
                     parent = triples[triples.length - 1];
                 }
-                // If current node has got child-nodes call parseOneNode() recursively
+                // If current node has got child-nodes call parseOneNode() recursively.
                 if (tag.children) parseOneNode(tag.children, parent);
             });
         }
@@ -52,7 +52,7 @@ export class MicrodataService {
         // Start parsing DOM
         parseOneNode(dom, null);
 
-        // Add triples array to reponse
+        // Add triples array to reponse.
         queryResponse.triples = triples;
 
         console.log('Processed ' + String(triples.length) + ' ' + queryResponse.resourceFormat + '-Items');
@@ -60,21 +60,34 @@ export class MicrodataService {
         return new Promise((resolve, reject) => resolve(queryResponse));
     }
 
+    // Returns the predicate of a triple with its name and uri as TriplePart.
     private static getPredicate(itemprop: string, parentObject: TriplePart): TriplePart {
+        // If itemprop is uri set name = uri (string behind last slash).
         let name: string = isUrl(itemprop) ? itemprop.split('/')[itemprop.split('/').length - 1] : itemprop;
-        let uri: string = isUrl(name) ? name : (parentObject.uri ? this.generatePredicateUrl(parentObject.uri, name) : null);
+        // If itemprop is uri set uri = uri. If not get vocab information from parent object and generate predicate uri.
+        let uri: string = isUrl(itemprop) ? itemprop : (parentObject.uri ? this.generatePredicateUrl(parentObject.uri, name) : null);
         if (uri) return {name: name, uri: uri};
         else return {name: name};
     }
 
+    // Returns the object of a triple with its name and uri as TriplePart.
     private static getObject(tag: any, siteUri: string, scopeCounter?: number, parentObject?: TriplePart): TriplePart {
         let name: string;
         let uri = '';
 
         if (scopeCounter && scopeCounter > 0) {
+            /*
+             * If scopeCounter is not null and not 0 current object references a child triple.
+             * New id of child triple = current id + 1
+             */
             name = '_:genid' + String(scopeCounter + 1);
             uri = null;
         } else if (tag.attribs.hasOwnProperty('itemscope') && tag.attribs.hasOwnProperty('itemtype')) {
+            /*
+             * If current tag contains "itemtype" and "itemscope" it is a new parent triple.
+             * Object contains uri and name to rdf-syntax-ns#type.
+             * Same logic like in getPredicate()-Function.
+             */
             name = !isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype :
                 tag.attribs.itemtype.split('/')[tag.attribs.itemtype.split('/').length - 1];
             uri = isUrl(tag.attribs.itemtype) ? tag.attribs.itemtype : (
@@ -84,6 +97,10 @@ export class MicrodataService {
                 );
 
         } else {
+            /*
+             * If tag is neither referencing another triple nor being a new parent triple
+             * extract content information.
+             */
             let isLink = false;
 
             if (tag.attribs.hasOwnProperty('title'))
@@ -91,12 +108,14 @@ export class MicrodataService {
             else if (tag.attribs.hasOwnProperty('content'))
                 name = tag.attribs.content;
             else {
+                // Extract plaintext
                 name = '';
                 tag.children.filter(node => node.type === 'text').forEach(text => {
                     name += text.data;
                 });
             }
 
+            // If contains "href" or "src" element set name (if name is null) and uri.
             if (tag.attribs.hasOwnProperty('href')) {
                 if (!name) name = isUrl(tag.attribs.href) ? tag.attribs.href.split('/')[tag.attribs.href.split('/').length - 1] : tag.attribs.href;
                 uri = tag.attribs.href;
@@ -107,6 +126,7 @@ export class MicrodataService {
                 isLink = true;
             }
 
+            // Handling absolute and relative uri.
             if (isLink) {
                 if (uri.startsWith('/')) {
                     let temp = uri;
@@ -120,12 +140,15 @@ export class MicrodataService {
                 uri = isUrl(name) ? name : null;
             }
         }
+
         if (uri) {
-            if (!name || name.replace(/(\r\n|\r|\n| )/g, '').length == 0) name = uri.split('/')[uri.split('/').length - 1];
+            // If name is null or name is empty (or if it just contains "\r", "\n", "\t"), set name = uri (string behind last slash).
+            if (!name || name.replace(/(\r|\n|\t| )/g, '').length == 0) name = uri.split('/')[uri.split('/').length - 1];
             return {name: name, uri: uri};
         } else return {name: name};
     }
 
+    // Remove string behind last slash in uri and combine it with the name.
     private static generatePredicateUrl(uri: string, name: string): string {
         let response = ''
         uri.split('/').slice(0, -1).forEach(urlPart => response = response.concat(urlPart + '/'));
