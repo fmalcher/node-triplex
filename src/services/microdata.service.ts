@@ -42,10 +42,9 @@ export class MicrodataService {
                         predicate: {name: 'rdf-syntax-ns#type', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'},
                         object: this.getObject(tag, uri, 0, parent != null ? parent.object : null)
                     });
-                    parent = triples[triples.length - 1];
                 }
                 // If current node has got child-nodes call parseOneNode() recursively.
-                if (tag.children) parseOneNode(tag.children, parent);
+                if (tag.children) parseOneNode(tag.children, tag.attribs.hasOwnProperty('itemscope') ? triples[triples.length - 1] : parent);
             });
         }
 

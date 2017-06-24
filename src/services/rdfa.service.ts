@@ -83,7 +83,7 @@ export class RDFaService {
                     parent = triples[triples.length - 1];
                 }
                 // If current node has got child-nodes call parseOneNode() recursively.
-                if (tag.children) parseOneNode(tag.children, parent, currentVocab);
+                if (tag.children) parseOneNode(tag.children, tag.attribs.hasOwnProperty('typeof') ? triples[triples.length - 1] : parent, currentVocab);
             });
         }
 
