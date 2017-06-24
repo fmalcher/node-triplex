@@ -121,7 +121,7 @@ export class MicrodataService {
                 uri = tag.attribs.href;
                 isLink = true;
             } else if (tag.attribs.hasOwnProperty('src')) {
-                if (!name) name = tag.attribs.src;
+                if (!name) name = isUrl(tag.attribs.src) ? tag.attribs.src.split('/')[tag.attribs.src.split('/').length - 1] : tag.attribs.src;
                 uri = tag.attribs.src;
                 isLink = true;
             }
