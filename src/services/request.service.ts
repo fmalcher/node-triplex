@@ -47,7 +47,7 @@ export class RequestService {
     // Find all semantic data types in html/plaintext.
     static findDataTypes(content: any): Promise<any> {
 
-        // IN FUTURE: EXTEND THIS INTERFACE FOR MORE DATA TYPES!
+        // MODIFY FOR MORE TYPES: EXTEND THIS INTERFACE FOR MORE DATA TYPES!
         interface Data {
             content: any;
             containsMicrodata: boolean;
@@ -55,7 +55,7 @@ export class RequestService {
             containsNtriples: boolean;
         }
 
-        // IN FUTURE: EXTEND THIS FUNTION FOR MORE OR PRECISED DATA TYPE TESTS!
+        // MODIFY FOR MORE TYPES: EXTEND THIS FUNTION FOR MORE OR PRECISED DATA TYPE TESTS!
         return new Promise((resolve, reject) => {
             let dataTypes: Data = {content: content, containsMicrodata: false, containsRDFa: false, containsNtriples: false};
             // Content is type of HTML
@@ -94,7 +94,7 @@ export class RequestService {
 
     /*
      * This function calls the triple generation algorithms for microdata, RDFa and n-triples.
-     * IN FUTURE: EXTEND THIS FUNCTION FOR MORE DATA TYPES!
+     * MODIFY FOR MORE TYPES: EXTEND THIS FUNCTION FOR MORE DATA TYPES!
      */
     static generateResponse(dataTypes, uri: string): Promise<QueryResponse[]> {
         let promises: Promise<QueryResponse>[] = [];
