@@ -3,9 +3,9 @@
 This is the Backend of *Triplex*. It extracts semantic triples placed in HTML-content like Microdata and RDFa.
 Furthermore it provides the processing of N-Triples.
 
-To get the Web-Frontend please visit [https://github.com/triplex-browser/ng-triplex.git](https://github.com/triplex-browser/ng-triplex.git)
+To get the Web Frontend please visit [https://github.com/triplex-browser/ng-triplex.git](https://github.com/triplex-browser/ng-triplex.git)
 
-We serve a running version for you at [http://triplex.work](http://triplex.work)
+We serve a running demo for you at [http://triplex.work](http://triplex.work)
 
 *This project was generated with Node.js version 8.1.0.*
 
@@ -26,7 +26,7 @@ npm start
 ```
 
 ## Requesting Data without web-frontend
-* Create a new http post-request for [http://localhost:3012/query](http://localhost:3000/query)
+* Create a new http post-request for [http://localhost:3012/query](http://localhost:3012/query)
 * The body of your request should contain the URI of the website you are interested in extracting its semantic triples.
 
 ## Developing or implementation of new parsing algorithms
