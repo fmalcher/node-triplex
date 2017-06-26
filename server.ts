@@ -9,10 +9,14 @@ server.use(bodyParser());
 server.use(CORS({}));
 server.use(queryParser());
 
+server.get('/', queryController.processRoot);
+server.post('/', queryController.processRoot);
+
 /*
  * Provide ressource uri for triple requests.
  * If necessary other ressources could be added here in future.
  */
+
 server.post('/query', queryController.processQuery);
 
 // Start server listening in port 3012.
