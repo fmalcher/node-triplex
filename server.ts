@@ -15,7 +15,7 @@ server.use(queryParser());
  */
 server.post('/query', queryController.processQuery);
 
-// Start server listening in port 3000.
-server.listen(3000, () => {
+// Start server listening in port 3012.
+server.listen(3012, () => {
     console.log('Triplex API on %s', server.url + '/query');
 });
