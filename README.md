@@ -26,7 +26,7 @@ npm start
 ```
 
 ## Requesting Data without web-frontend
-* Create a new http post-request for [http://localhost:3000/query](http://localhost:3000/query)
+* Create a new http post-request for [http://localhost:3012/query](http://localhost:3000/query)
 * The body of your request should contain the URI of the website you are interested in extracting its semantic triples.
 
 ## Developing or implementation of new parsing algorithms
