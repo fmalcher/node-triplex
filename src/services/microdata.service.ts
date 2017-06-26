@@ -18,7 +18,7 @@ export class MicrodataService {
         let scopeCounter = 0;
 
         let parseOneNode = (nodes, _parent: Triple) => {
-            let parent: Triple = _parent;
+            let currentParent: Triple = _parent;
 
             /*
              * For each node in current DOM-hierarchy that has the type "tag" (<tagname/>)
@@ -26,11 +26,12 @@ export class MicrodataService {
              * is found, generate new triple an push it to triples array.
              */
             nodes.filter(n => n.type === 'tag').forEach(tag => {
+                let newParent: Triple = null;
                 // itemprop found (predicate). Belongs to a parent triple.
-                if (tag.attribs.hasOwnProperty('itemprop') && parent) {
+                if (tag.attribs.hasOwnProperty('itemprop') && currentParent) {
                     triples.push({
-                        subject: parent.subject,
-                        predicate: this.getPredicate(tag.attribs.itemprop, parent.object),
+                        subject: currentParent.subject,
+                        predicate: this.getPredicate(tag.attribs.itemprop, currentParent.object),
                         object: tag.attribs.hasOwnProperty('itemscope') ? this.getObject(tag, uri, scopeCounter) : this.getObject(tag, uri)
                     });
                 }
@@ -40,11 +41,12 @@ export class MicrodataService {
                     triples.push({
                         subject: {name: '_:genid' + String(scopeCounter)},
                         predicate: {name: 'rdf-syntax-ns#type', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'},
-                        object: this.getObject(tag, uri, 0, parent != null ? parent.object : null)
+                        object: this.getObject(tag, uri, 0, currentParent != null ? currentParent.object : null)
                     });
+                    newParent = triples[triples.length - 1];
                 }
                 // If current node has got child-nodes call parseOneNode() recursively.
-                if (tag.children) parseOneNode(tag.children, tag.attribs.hasOwnProperty('itemscope') ? triples[triples.length - 1] : parent);
+                if (tag.children) parseOneNode(tag.children, newParent ? newParent : currentParent);
             });
         }
 

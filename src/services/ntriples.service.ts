@@ -33,14 +33,14 @@ export class Ntriples {
         let tripleLines: string[] = content.split('\n');
 
         // Iterare array
-        for (let i = 0; i < tripleLines.length; i++) {
-            if (tripleLines[i].length > 0) {
+        tripleLines.forEach(tripleLine => {
+            if (tripleLine.length > 0) {
                 let subject: string;
                 let predicate: string;
                 let object: string;
 
                 // Set subjetc and/or object if triple-string contains "_:"
-                let blankNodes: string[] = tripleLines[i].split('_:');
+                let blankNodes: string[] = tripleLine.split('_:');
                 if (blankNodes.length > 1) {
                     if (blankNodes[0].length == 0) subject = '_:' + blankNodes[1].split(' ')[0];
                     else object = '_:' + blankNodes[1].split(' ')[0];
@@ -49,31 +49,31 @@ export class Ntriples {
                 }
 
                 // Replace escaped quote signs with §§§§
-                tripleLines[i] = tripleLines[i].replace(/\\"/g, '§§§§');
+                tripleLine = tripleLine.replace(/\\"/g, '§§§§');
 
                 // Set object if triple-string still contains quote signs.
-                let quotedNodes: string[] = tripleLines[i].split('"');
+                let quotedNodes: string[] = tripleLine.split('"');
                 if (quotedNodes.length > 1)
                     object = quotedNodes[1].replace(/§§§§/g, '"');
 
                 // Split triple-string by "<", set predicate [and subject and object (if null)].
-                let angleBracketNodes: string[] = tripleLines[i].split('<');
-                for (let j = 0; j < angleBracketNodes.length; j++) {
-                    switch (j) {
+                let angleBracketNodes: string[] = tripleLine.split('<');
+                angleBracketNodes.forEach((angleBracketNode, i) => {
+                    switch (i) {
                         case 1:
-                            if (subject) predicate = angleBracketNodes[j].split('>')[0];
-                            else subject = angleBracketNodes[j].split('>')[0];
+                            if (subject) predicate = angleBracketNode.split('>')[0];
+                            else subject = angleBracketNode.split('>')[0];
                             break;
                         case 2:
                             if (predicate) {
-                                if (!object) object = angleBracketNodes[j].split('>')[0];
-                            } else predicate = angleBracketNodes[j].split('>')[0];
+                                if (!object) object = angleBracketNode.split('>')[0];
+                            } else predicate = angleBracketNode.split('>')[0];
                             break;
                         case 3:
-                            if (!object) object = angleBracketNodes[j].split('>')[0];
+                            if (!object) object = angleBracketNode.split('>')[0];
                             break;
                     }
-                }
+                });
 
                 // Push new triple to array.
                 triples.push({
@@ -83,10 +83,10 @@ export class Ntriples {
                 });
 
                 // If triple-string contains "^^" add uri to object.
-                if (tripleLines[i].split('^^').length > 1)
-                    triples[triples.length - 1].object.uri = tripleLines[i].split('^^')[1].split('<')[1].split('>')[0];
+                if (tripleLine.split('^^').length > 1)
+                    triples[triples.length - 1].object.uri = tripleLine.split('^^')[1].split('<')[1].split('>')[0];
             }
-        }
+        });
 
         // Add triples array to reponse.
         queryResponse.triples = triples;

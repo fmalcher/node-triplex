@@ -14,38 +14,42 @@ export class RequestService {
     // Get html/plaintext from requested website.
     static readFromUri(uri: string): Promise<any> {
         return new Promise((resolve, reject) => {
-            let options = {
+            let plaintextOption = {
                 url: uri,
-                headers: {
-                    'Accept': 'text/plain'
-                }
+                headers: { 'Accept': 'text/plain' }
             };
-            request(options, (error, response, body) => {
+            request(plaintextOption, (error, response, body) => {
                 if (error) reject(400);
-                resolve(body);
+                if (this.checkNtriples(body)) resolve(this.findDataTypes(body));
+                else request(uri, (error, response, body) => {
+                    if (error) reject(400);
+                    this.parseHtmlToDom(body)
+                    .then(content => this.findDataTypes(content))
+                    .then(dataTypes => resolve(dataTypes));
+                });
             });
         });
     }
 
     // Parse html/plaintext to iterable DOM-object.
-    static parseHtmlToDom(rawHtml: string): Promise<any> {
+    private static parseHtmlToDom(body: string): Promise<any> {
         return new Promise((resolve, reject) => {
             let handler = new htmlparser.DomHandler((error, dom) => {
                 if (error) reject(422);
                 resolve(dom);
             });
             let parser = new htmlparser.Parser(handler);
-            parser.write(rawHtml);
+            parser.write(body);
             parser.end();
         });
     }
 
     // Find all semantic data types in html/plaintext.
-    static findDataTypes(content: string): Promise<any> {
+    static findDataTypes(content: any): Promise<any> {
 
         // IN FUTURE: EXTEND THIS INTERFACE FOR MORE DATA TYPES!
         interface Data {
-            content: string;
+            content: any;
             containsMicrodata: boolean;
             containsRDFa: boolean;
             containsNtriples: boolean;
@@ -54,18 +58,37 @@ export class RequestService {
         // IN FUTURE: EXTEND THIS FUNTION FOR MORE OR PRECISED DATA TYPE TESTS!
         return new Promise((resolve, reject) => {
             let dataTypes: Data = {content: content, containsMicrodata: false, containsRDFa: false, containsNtriples: false};
-            let handler = new htmlparser.DomHandler((error, dom) => {
-                if (error) reject(500);
-                if (content.includes('itemscope') && content.includes('itemtype') && content.includes('itemprop'))
-                    dataTypes.containsMicrodata = true;
-                if ((content.includes('vocab') || content.includes('prefix')) && content.includes('typeof') && content.includes('property'))
-                    dataTypes.containsRDFa = true;
-                dataTypes.containsNtriples = this.checkNtriples(content);
-                resolve(dataTypes);
-            });
-            let parser = new htmlparser.Parser(handler);
-            parser.write(content);
-            parser.end();
+            // Content is type of HTML
+            if (typeof(content) == 'object') {
+                let hasItemscope = false;
+                let hastItemtype = false;
+                let hasItemprop = false;
+                let hasTypeof = false;
+                let hasProperty = false;
+                let testNodes = (nodes: any[]) => {
+                    nodes.filter(n => n.type === 'tag').forEach(tag => {
+
+                        // Test for Microdata
+                        if (tag.attribs.hasOwnProperty('itemscope')) hasItemscope = true;
+                        if (tag.attribs.hasOwnProperty('itemtype')) hastItemtype = true;
+                        if (tag.attribs.hasOwnProperty('itemprop')) hasItemprop = true;
+                        if (hasItemscope && hastItemtype && hasItemprop) dataTypes.containsMicrodata = true;
+
+                        // Test for RDFa
+                        if (tag.attribs.hasOwnProperty('typeof')) hasTypeof = true;
+                        if (tag.attribs.hasOwnProperty('property')) hasProperty = true;
+                        if (hasTypeof && hasProperty) dataTypes.containsRDFa = true;
+
+                        if (tag.children) testNodes(tag.children);
+                    });
+                }
+                testNodes(content);
+            } else {
+                // Content is type of Plaintext
+                dataTypes.containsNtriples = true;
+                // dataTypes.containsNtriples = this.checkNtriples(content);
+            }
+            resolve(dataTypes);
         });
     }
 
@@ -78,15 +101,13 @@ export class RequestService {
 
         // Microdata
         if (dataTypes.containsMicrodata) {
-            let p = this.parseHtmlToDom(dataTypes.content)
-                .then(dom => MicrodataService.getTriplesFromDom(dom, uri));
+            let p = MicrodataService.getTriplesFromDom(dataTypes.content, uri);
             promises.push(p);
         }
 
         // RDFa
         if (dataTypes.containsRDFa) {
-            let p = this.parseHtmlToDom(dataTypes.content)
-                .then(dom => RDFaService.getTriplesFromDom(dom, uri));
+            let p = RDFaService.getTriplesFromDom(dataTypes.content, uri);
             promises.push(p);
         }
 

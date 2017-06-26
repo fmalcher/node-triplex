@@ -19,16 +19,17 @@ export class RDFaService {
         let scopeCounter = 0;
 
         let parseOneNode = (nodes, _parent: Triple, _vocab: string) => {
-            let parent: Triple = _parent;
+            let currentParent: Triple = _parent;
             let currentVocab: string = _vocab;
 
-             /*
+            /*
              * For each node in current DOM-hierarchy that has the type "tag" (<tagname/>)
              * test if it has got an element like "property" or "typeof". If such an element
              * is found, generate new triple an push it to triples array. Furthermore look for
              * elements like "vocab" and "prefix" for managing the schema-vocabularies.
              */
             nodes.filter(n => n.type === 'tag').forEach(tag => {
+                let newParent: Triple = null;
                 /*
                  * vocab found. If child-nodes properties do not contain a prefix they
                  * belong to this vocab.
@@ -54,20 +55,20 @@ export class RDFaService {
                     let prefixes: string[] = tag.attribs.prefix.replace(/:\/\//g, '§§§§//').split(' ');
                     let currentPrefix = null;
                     // Split by ":", read prefix-name and vocab (replacing "§§§§" with ":") and add them to the dictionary.
-                    for (let i = 0; i < prefixes.length; i++) {
-                        if (prefixes[i].endsWith(':')) {
-                            currentPrefix = prefixes[i].split(':')[0];
-                        } else if (prefixes[i].split(':').length > 1) {
-                            vocabs.set(prefixes[i].split(':')[0], prefixes[i].split(':')[1].replace('§§§§', ':'));
+                    prefixes.forEach(prefix => {
+                        if (prefix.endsWith(':')) {
+                            currentPrefix = prefix.split(':')[0];
+                        } else if (prefix.split(':').length > 1) {
+                            vocabs.set(prefix.split(':')[0], prefix.split(':')[1].replace('§§§§', ':'));
                         } else {
-                            vocabs.set(currentPrefix, prefixes[i].replace('§§§§', ':'));
+                            vocabs.set(currentPrefix, prefix.replace('§§§§', ':'));
                         }
-                    }
+                    });
                 }
                 // property found (predicate). Belongs to a parent triple.
-                if (tag.attribs.hasOwnProperty('property') && parent) {
+                if (tag.attribs.hasOwnProperty('property') && currentParent) {
                     triples.push({
-                        subject: parent.subject,
+                        subject: currentParent.subject,
                         predicate: this.getPredicate(currentVocab, vocabs, tag.attribs.property),
                         object: tag.attribs.hasOwnProperty('typeof') ? this.getObject(currentVocab, vocabs, tag, uri, scopeCounter) : this.getObject(currentVocab, vocabs, tag, uri)
                     });
@@ -80,10 +81,10 @@ export class RDFaService {
                         predicate: {name: 'rdf-syntax-ns#type', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'},
                         object: this.getObject(currentVocab, vocabs, tag, uri)
                     });
-                    parent = triples[triples.length - 1];
+                    newParent = triples[triples.length - 1];
                 }
                 // If current node has got child-nodes call parseOneNode() recursively.
-                if (tag.children) parseOneNode(tag.children, tag.attribs.hasOwnProperty('typeof') ? triples[triples.length - 1] : parent, currentVocab);
+                if (tag.children) parseOneNode(tag.children, newParent ? newParent : currentParent, currentVocab);
             });
         }
 
